@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import ProductCard from './components/ProductCard';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import ContactForm from './components/ContactForm';
+
+const API_URL = 'http://localhost:3000/api';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -14,7 +19,7 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:3001/products');
+        const response = await fetch(`${API_URL}/products`);
         if (!response.ok) {
           throw new Error('Ошибка сервера');
         }
@@ -39,47 +44,56 @@ function App() {
   );
 
   return (
-    <div className="app-container">
-      <header className="header">
-        <h1>🌾 АгроМаркет</h1>
-        <div className="cart-badge">
-          🛒 Корзина: {cartCount}
-        </div>
-      </header>
+    <>
+      <Header cartCount={cartCount} />
 
-      <div className="search-container">
-        <input
-          className="search-input"
-          type="text"
-          placeholder="Поиск товара по каталогу..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <main>
-        <h2 className="catalog-title">Каталог товаров</h2>
-
-        {loading && <p className="status-message">Загрузка товаров...</p>}
-        {error && <p className="status-message" style={{ color: '#e74c3c' }}>{error}</p>}
-
-        {!loading && !error && (
-          <div className="products-grid">
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAdd={handleAddToCart}
-                />
-              ))
-            ) : (
-              <p className="status-message">Товары не найдены</p>
-            )}
+      <main className="page">
+        <section id="catalog" className="catalog">
+          <div className="catalog-toolbar">
+            <h2>Каталог</h2>
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Поиск товара по каталогу..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        )}
+
+          {loading && <p className="status-message">Загрузка товаров...</p>}
+          {error && <p className="status-message" style={{ color: '#e74c3c' }}>{error}</p>}
+
+          {!loading && !error && (
+            <div className="product-grid">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAdd={handleAddToCart}
+                    featured={product.id === 1}
+                  />
+                ))
+              ) : (
+                <p className="status-message">Товары не найдены</p>
+              )}
+            </div>
+          )}
+        </section>
+
+        <aside id="delivery" className="sidebar">
+          <h3>Доставка</h3>
+          <ul>
+            <li>Астана — на следующий день</li>
+            <li>Акмолинская область — 2–3 дня</li>
+            <li>Бесплатно от 20 000 тг</li>
+          </ul>
+        </aside>
+        <ContactForm />
       </main>
-    </div>
+
+      <Footer />
+    </>
   );
 }
 

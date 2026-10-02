@@ -1,6 +1,7 @@
-function ProductCard({ product, onAdd }) {
+function ProductCard({ product, onAdd, featured }) {
     return (
-        <article className="card">
+        <article className={featured ? 'card card--featured' : 'card'}>
+            {featured === true && <span className="badge">Товар недели</span>}
             <img src={product.image} alt={product.name} />
             <div className="card-body">
                 <h3>{product.name}</h3>
