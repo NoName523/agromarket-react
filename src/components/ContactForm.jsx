@@ -1,12 +1,17 @@
+import { useState } from 'react';
+
 const API_URL = 'http://localhost:3000/api';
 
 function ContactForm() {
+  const [sending, setSending] = useState(false);
+
   async function handleSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const data = Object.fromEntries(new FormData(form));
 
     try {
+      setSending(true);
       const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,6 +28,8 @@ function ContactForm() {
       form.reset();
     } catch {
       alert('Сервер недоступен. Запущен ли agromarket-server?');
+    } finally {
+      setSending(false);
     }
   }
 
@@ -73,7 +80,9 @@ function ContactForm() {
           rows="4"
         />
 
-        <button type="submit">Отправить заявку</button>
+        <button type="submit" disabled={sending}>
+          {sending ? 'Отправка…' : 'Отправить заявку'}
+        </button>
       </form>
     </section>
   );
