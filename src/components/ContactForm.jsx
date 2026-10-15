@@ -1,14 +1,60 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const API_URL = 'http://localhost:3000/api';
 
 function ContactForm() {
   const [sending, setSending] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProducts() {
+      try {
+        const res = await fetch(`${API_URL}/products`);
+        if (!res.ok) {
+          throw new Error('Не удалось загрузить товары');
+        }
+
+        const data = await res.json();
+        if (!Array.isArray(data) || data.some((product) =>
+          !Number.isSafeInteger(Number(product.id)) ||
+          Number(product.id) < 1 ||
+          typeof product.name !== 'string'
+        )) {
+          throw new Error('Сервер вернул некорректный список товаров');
+        }
+
+        if (active) {
+          setProducts(data);
+        }
+      } catch {
+        if (active) {
+          setProductsError('Не удалось загрузить товары. Заявку можно отправить без выбора товара.');
+        }
+      } finally {
+        if (active) {
+          setProductsLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const form = e.target;
-    const data = Object.fromEntries(new FormData(form));
+    const formData = Object.fromEntries(new FormData(form));
+    const data = {
+      ...formData,
+      product_id: formData.product_id ? Number(formData.product_id) : null,
+    };
 
     try {
       setSending(true);
@@ -37,6 +83,20 @@ function ContactForm() {
     <section id="contact" className="contact">
       <h2>Оптовая заявка</h2>
       <form className="contact-form" onSubmit={handleSubmit}>
+        <label htmlFor="product_id">Выберите товар</label>
+        <select id="product_id" name="product_id" defaultValue="">
+          <option value="">Не выбран</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+        {productsLoading && <p className="status-message">Загрузка товаров...</p>}
+        {productsError && (
+          <p className="status-message" role="alert">{productsError}</p>
+        )}
+
         <label htmlFor="name">Имя / организация</label>
         <input id="name" name="name" type="text" required />
 

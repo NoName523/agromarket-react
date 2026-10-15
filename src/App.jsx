@@ -25,7 +25,7 @@ function App() {
         }
         const data = await response.json();
         setProducts(data);
-      } catch (err) {
+      } catch {
         setError('Не удалось загрузить товары');
       } finally {
         setLoading(false);
