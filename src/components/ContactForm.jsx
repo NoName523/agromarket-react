@@ -1,51 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { apiFetch } from '../api';
 
-const API_URL = 'http://localhost:3000/api';
-
-function ContactForm() {
+function ContactForm({ products, productsLoading, onCreated, onAuthError }) {
   const [sending, setSending] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [productsError, setProductsError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadProducts() {
-      try {
-        const res = await fetch(`${API_URL}/products`);
-        if (!res.ok) {
-          throw new Error('Не удалось загрузить товары');
-        }
-
-        const data = await res.json();
-        if (!Array.isArray(data) || data.some((product) =>
-          !Number.isSafeInteger(Number(product.id)) ||
-          Number(product.id) < 1 ||
-          typeof product.name !== 'string'
-        )) {
-          throw new Error('Сервер вернул некорректный список товаров');
-        }
-
-        if (active) {
-          setProducts(data);
-        }
-      } catch {
-        if (active) {
-          setProductsError('Не удалось загрузить товары. Заявку можно отправить без выбора товара.');
-        }
-      } finally {
-        if (active) {
-          setProductsLoading(false);
-        }
-      }
-    }
-
-    loadProducts();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -58,22 +16,14 @@ function ContactForm() {
 
     try {
       setSending(true);
-      const res = await fetch(`${API_URL}/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const result = await res.json();
-
-      if (res.ok === false) {
-        alert('Ошибка: ' + result.error);
-        return;
-      }
-
+      setError('');
+      const result = await apiFetch('/orders', { method: 'POST', body: data });
       alert(`Заявка №${result.id} принята!`);
       form.reset();
-    } catch {
-      alert('Сервер недоступен. Запущен ли agromarket-server?');
+      onCreated();
+    } catch (err) {
+      setError(err.message);
+      onAuthError(err);
     } finally {
       setSending(false);
     }
@@ -93,9 +43,7 @@ function ContactForm() {
           ))}
         </select>
         {productsLoading && <p className="status-message">Загрузка товаров...</p>}
-        {productsError && (
-          <p className="status-message" role="alert">{productsError}</p>
-        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
 
         <label htmlFor="name">Имя / организация</label>
         <input id="name" name="name" type="text" required />

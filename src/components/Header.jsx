@@ -1,4 +1,4 @@
-function Header({ cartCount = 0 }) {
+function Header({ cartCount = 0, user, onLogout }) {
   return (
     <header className="site-header">
       <a href="#catalog">🌾 АгроМаркет</a>
@@ -7,9 +7,14 @@ function Header({ cartCount = 0 }) {
           <li><a href="#catalog">Каталог</a></li>
           <li><a href="#delivery">Доставка</a></li>
           <li><a href="#contact">Контакты</a></li>
+          <li><a href="#auth">{user ? 'Аккаунт' : 'Вход'}</a></li>
         </ul>
       </nav>
-      <div className="cart-badge">🛒 Корзина: {cartCount}</div>
+      <div className="header-actions">
+        {user && <span className="user-name">Здравствуйте, {user.name}</span>}
+        {user && <button type="button" className="logout-button" onClick={onLogout}>Выйти</button>}
+        <div className="cart-badge">🛒 Корзина: {cartCount}</div>
+      </div>
     </header>
   );
 }

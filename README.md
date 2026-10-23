@@ -1,19 +1,6 @@
-# React + Vite
+# АгроМаркет — React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Frontend проекта: каталог, поиск, корзина и оптовая заявка, а с ЛР7 — вход, регистрация и панель администратора.
 
 ## Лабораторная 4 — вёрстка
 
@@ -129,3 +116,68 @@ npm run dev
 - макет `.page` переписан через `grid-template-areas`;
 - боковая панель «Доставка» на десктопе сделана `sticky`;
 - шапка сделана `sticky`.
+
+## Лабораторная №7 — вход, роли и бонусы
+
+### Запуск
+
+Backend должен работать на `http://localhost:3000`, а его PostgreSQL — в Ubuntu
+VMware по адресу `192.168.174.10:5432`. Frontend запускается из этого каталога:
+
+```bash
+npm install
+npm run dev
+```
+
+Откройте `http://localhost:5173`. При необходимости задайте
+`VITE_API_URL=http://localhost:3000/api` в локальном `.env`; значение по
+умолчанию уже соответствует учебному стенду. Секреты в Vite-переменные не
+помещайте: они попадут в браузерный код. Инструкция выше по запуску
+`json-server` относится только к историческому этапу ЛР4 и для ЛР7 не нужна.
+
+### Вход и интерфейс
+
+Форма [LoginForm](./src/components/LoginForm.jsx) переключается между входом и
+регистрацией. После успешного ответа JWT хранится в `localStorage`, имя
+пользователя появляется в шапке, доступна кнопка выхода. После F5 приложение
+вызывает `GET /api/auth/me`: недействительный или просроченный токен удаляется,
+показывается форма входа. Запросы выполняются через
+[apiFetch](./src/api.js), который добавляет Bearer-токен и показывает ошибки API.
+
+Каталог, поиск, счётчик корзины и форма оптовой заявки сохранены. Гость может
+отправить заявку без входа. Заявка вошедшего пользователя связывается с его
+аккаунтом и появляется в разделе «Мои заявки»; раздел не показывает чужие
+заявки. Доступ к данным проверяется на backend, скрытие элементов интерфейса
+само по себе защитой не считается.
+
+Администратор дополнительно видит [AddProductForm](./src/components/AddProductForm.jsx),
+кнопки удаления товаров и панель заявок. Добавление и удаление обновляют
+каталог без перезагрузки. Удаление требует подтверждения. В панели можно
+изменить статус заявки; пользователям без роли admin панель не показывается.
+Для вошедших пользователей доступна форма смены пароля.
+
+### Четыре бонуса
+
+1. Мои заявки — `GET /api/orders/my` и связь новых заявок с аккаунтом.
+2. Удаление товара — подтверждение и `DELETE /api/products/:id` для admin.
+3. Смена пароля — форма и `PATCH /api/auth/password`.
+4. Панель заявок — просмотр и изменение статуса для admin.
+
+Сообщения 401 завершают сеанс и предлагают войти снова; сообщения 403
+показываются рядом с действием. Пароли и JWT не записываются в журнал браузера.
+
+### Проверки и снимки
+
+Для ЛР7 `npm run lint` и `npm run build` прошли. Проверки записи в рабочую БД
+для создания скриншотов не запускались. Существующие снимки в
+[`screenshots/lab4/`](./screenshots/lab4/) относятся к ЛР4. Снимки ЛР7 ниже
+показывают форму входа с вкладкой регистрации, интерфейс обычного пользователя
+и административную форму товара. Пароли и JWT на них не видны.
+
+![Вход и вкладка регистрации](./screenshots/lab7-react-auth.png)
+![Личный кабинет обычного пользователя](./screenshots/lab7-react-user.png)
+![Личный кабинет администратора и форма товара](./screenshots/lab7-react-admin.png)
+
+Безопасная папка Postman Runner в backend завершилась с результатом
+**20 passed, 0 failed, 0 skipped, 0 errors**. Проверки изменяющего CRUD на
+рабочей базе этим результатом не подтверждаются.

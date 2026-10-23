@@ -1,4 +1,4 @@
-function ProductCard({ product, onAdd, featured }) {
+function ProductCard({ product, onAdd, onDelete, featured }) {
     return (
         <article className={featured ? 'card card--featured' : 'card'}>
             {featured === true && <span className="badge">Товар недели</span>}
@@ -9,6 +9,10 @@ function ProductCard({ product, onAdd, featured }) {
                 <button className="card-button" onClick={() => onAdd(product)}>
                     В корзину
                 </button>
+                {onDelete && <button type="button" className="delete-button"
+                    onClick={() => onDelete(product)}>
+                    Удалить товар
+                </button>}
             </div>
         </article>
     );

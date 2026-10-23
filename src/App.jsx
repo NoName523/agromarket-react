@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch, TOKEN_KEY } from './api';
 import ProductCard from './components/ProductCard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ContactForm from './components/ContactForm';
-
-const API_URL = 'http://localhost:3000/api';
+import LoginForm from './components/LoginForm';
+import AddProductForm from './components/AddProductForm';
+import PasswordForm from './components/PasswordForm';
+import MyOrders from './components/MyOrders';
+import OrdersPanel from './components/OrdersPanel';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -12,31 +16,88 @@ function App() {
   const [cartCount, setCartCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY)));
+  const [authNotice, setAuthNotice] = useState('');
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
 
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch(`${API_URL}/products`);
-        if (!response.ok) {
-          throw new Error('Ошибка сервера');
-        }
-        const data = await response.json();
-        setProducts(data);
-      } catch {
-        setError('Не удалось загрузить товары');
-      } finally {
-        setLoading(false);
-      }
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await apiFetch('/products');
+      if (!Array.isArray(data)) throw new Error('Сервер вернул некорректный каталог');
+      setProducts(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-
-    loadProducts();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    apiFetch('/products').then((data) => {
+      if (active) setProducts(data);
+    }).catch((err) => {
+      if (active) setError(err.message);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    let active = true;
+    apiFetch('/auth/me', { token }).then((currentUser) => {
+      if (active) setUser(currentUser);
+    }).catch(() => {
+      if (active) {
+        localStorage.removeItem(TOKEN_KEY);
+        setAuthNotice('Сеанс завершился. Войдите снова.');
+      }
+    }).finally(() => {
+      if (active) setAuthLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+    setAuthNotice('');
+  }, []);
+
+  const handleAuthError = useCallback((err) => {
+    if (err.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      setUser(null);
+      setAuthNotice('Сеанс завершился. Войдите снова.');
+    }
+  }, []);
+
+  function handleAuthenticated(result) {
+    localStorage.setItem(TOKEN_KEY, result.token);
+    setUser(result.user);
+    setAuthNotice('');
+  }
+
+  async function handleDelete(product) {
+    if (!window.confirm(`Удалить товар «${product.name}»?`)) return;
+    try {
+      await apiFetch(`/products/${product.id}`, { method: 'DELETE' });
+      await loadProducts();
+    } catch (err) {
+      setError(err.message);
+      handleAuthError(err);
+    }
+  }
+
   function handleAddToCart() {
-    setCartCount(cartCount + 1);
+    setCartCount((count) => count + 1);
   }
 
   const filteredProducts = products.filter((product) =>
@@ -45,7 +106,7 @@ function App() {
 
   return (
     <>
-      <Header cartCount={cartCount} />
+      <Header cartCount={cartCount} user={user} onLogout={handleLogout} />
 
       <main className="page">
         <section id="catalog" className="catalog">
@@ -61,7 +122,7 @@ function App() {
           </div>
 
           {loading && <p className="status-message">Загрузка товаров...</p>}
-          {error && <p className="status-message" style={{ color: '#e74c3c' }}>{error}</p>}
+          {error && <p className="form-error" role="alert">{error}</p>}
 
           {!loading && !error && (
             <div className="product-grid">
@@ -71,6 +132,7 @@ function App() {
                     key={product.id}
                     product={product}
                     onAdd={handleAddToCart}
+                    onDelete={user?.role === 'admin' ? handleDelete : undefined}
                     featured={product.id === 1}
                   />
                 ))
@@ -89,8 +151,26 @@ function App() {
             <li>Бесплатно от 20 000 тг</li>
           </ul>
         </aside>
-        <ContactForm />
+        <ContactForm products={products} productsLoading={loading}
+          onCreated={() => setOrdersRefreshKey((key) => key + 1)}
+          onAuthError={handleAuthError} />
       </main>
+
+      <div className="dashboard-layout">
+        {authNotice && <p className="form-error" role="alert">{authNotice}</p>}
+        {authLoading ? <p className="panel">Проверка сеанса…</p> : user ? <>
+          <section id="auth" className="panel">
+            <h2>Личный кабинет</h2>
+            <p>Вы вошли как {user.name} ({user.role === 'admin' ? 'администратор' : 'пользователь'}).</p>
+          </section>
+          <PasswordForm onAuthError={handleAuthError} />
+          <MyOrders refreshKey={ordersRefreshKey} onAuthError={handleAuthError} />
+          {user.role === 'admin' && <>
+            <AddProductForm onAdded={loadProducts} onAuthError={handleAuthError} />
+            <OrdersPanel refreshKey={ordersRefreshKey} onAuthError={handleAuthError} />
+          </>}
+        </> : <LoginForm onAuthenticated={handleAuthenticated} />}
+      </div>
 
       <Footer />
     </>
