@@ -181,3 +181,17 @@ npm run dev
 Безопасная папка Postman Runner в backend завершилась с результатом
 **20 passed, 0 failed, 0 skipped, 0 errors**. Проверки изменяющего CRUD на
 рабочей базе этим результатом не подтверждаются.
+
+## Lab 8: API environment and verification
+
+The API address comes from `VITE_API_URL`. `.env.development` sets the local backend to `http://localhost:3000/api`; copy `.env.example` for another environment and set the public API URL before building. Vite variables are included in browser JavaScript, so never place passwords, JWT values, or other secrets in a `VITE_` variable.
+
+```bash
+npm ci
+npm run dev
+npm run lint
+npm test
+npm run build
+```
+
+The `apiFetch` helper continues to add the stored JWT and handle API responses. The `React CI` workflow runs install, lint, and build on Pull Requests and pushes to `main`. `LoginForm` has a component test for the registration-only name field.
