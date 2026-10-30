@@ -195,3 +195,6 @@ npm run build
 ```
 
 The `apiFetch` helper continues to add the stored JWT and handle API responses. The `React CI` workflow runs install, lint, and build on Pull Requests and pushes to `main`. `LoginForm` has a component test for the registration-only name field.
+## Скриншоты ЛР8
+
+![Успешный Frontend CI в GitHub Actions](./screenshots/lab8/lab8-frontend-ci-green.png)
