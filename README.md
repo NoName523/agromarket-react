@@ -198,3 +198,15 @@ The `apiFetch` helper continues to add the stored JWT and handle API responses. 
 ## Скриншоты ЛР8
 
 ![Успешный Frontend CI в GitHub Actions](./screenshots/lab8/lab8-frontend-ci-green.png)
+### Продакшен — ЛР9
+
+Фактический URL сайта и ссылка на deployment: **требуют ручного заполнения**.
+CI job `build` выполняет lint и сборку на Node 22. В Vercel задайте реальный
+`VITE_API_URL` с HTTPS и суффиксом `/api` до сборки (переменная публичная).
+Для Vite используются `npm run build` и каталог `dist`; `vercel.json` содержит
+SPA rewrite. Точный Origin сайта нужно разрешить в CORS_ORIGIN backend;
+Preview имеет отдельный Origin. После изменения VITE_API_URL нужна пересборка.
+Защита main должна требовать проверку `build` (ранее job назывался `frontend`).
+Локально 2026-11-06 lint и build прошли; публикация и проверка Preview не выполнялись.
+Полные ответы и список ручных действий ЛР9 находятся в README репозитория
+agromarket-server, в разделе «Продакшен».
