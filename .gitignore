@@ -17,6 +17,9 @@ dist-ssr
 *.dump
 *.backup
 *.pgdump
+test-results/
+playwright-report/
+coverage/
 
 # Editor directories and files
 .vscode/*

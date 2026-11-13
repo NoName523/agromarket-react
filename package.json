@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --config vite.config.js",
+    "test:watch": "vitest",
+    "coverage": "vitest run --config vite.config.js --coverage",
+    "test:coverage": "vitest run --config vite.config.js --coverage",
+    "e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,10 +20,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
