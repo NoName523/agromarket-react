@@ -1,0 +1,84 @@
+name: Playwright E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Select read-only checks or the registration and order flow
+        type: choice
+        required: true
+        default: read-only
+        options:
+          - read-only
+          - full-test-flow
+      test_environment_url:
+        description: Required for full-test-flow; enter the explicitly selected test frontend URL
+        type: string
+        required: false
+  schedule:
+    - cron: '0 7 * * 1'
+
+jobs:
+  read-only:
+    if: github.event_name == 'schedule' || inputs.suite == 'read-only'
+    runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Require configured production URL
+        run: |
+          if [ -z "$E2E_BASE_URL" ]; then
+            echo "Set the PRODUCTION_URL repository variable before running read-only E2E checks."
+            exit 1
+          fi
+      - name: Run read-only E2E checks
+        run: npx playwright test --grep-invert @creates-order
+      - name: Upload Playwright report after failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-read-only-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+  full-test-flow:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'full-test-flow'
+    runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ inputs.test_environment_url }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Require an explicit non-production test URL
+        run: |
+          if [ -z "$E2E_BASE_URL" ]; then
+            echo "Enter test_environment_url to run the registration and order flow."
+            exit 1
+          fi
+          node -e "const target = new URL(process.env.E2E_BASE_URL); const production = process.env.PRODUCTION_URL ? new URL(process.env.PRODUCTION_URL) : null; if (production && target.origin === production.origin) { console.error('The full test flow cannot target PRODUCTION_URL.'); process.exit(1); }"
+      - name: Run registration and order E2E
+        run: npx playwright test --grep @creates-order
+      - name: Upload Playwright report after failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-full-flow-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
