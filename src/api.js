@@ -1,3 +1,5 @@
+import { beginRequest } from './requestActivity';
+
 export const TOKEN_KEY = 'agromarket_jwt';
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -19,27 +21,32 @@ export async function apiFetch(path, { token, headers, body, ...options } = {}) 
     requestHeaders.set('Content-Type', 'application/json');
   }
 
-  let response;
+  const finishRequest = beginRequest();
   try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      headers: requestHeaders,
-      body: requestBody,
-    });
-  } catch {
-    throw new ApiError(0, 'Сервер недоступен. Проверьте подключение.');
-  }
+    let response;
+    try {
+      response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: requestHeaders,
+        body: requestBody,
+      });
+    } catch {
+      throw new ApiError(0, 'Сервер недоступен. Проверьте подключение.');
+    }
 
-  if (response.status === 204) return null;
-  const text = await response.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    throw new ApiError(response.status, 'Сервер вернул некорректный ответ.');
+    if (response.status === 204) return null;
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new ApiError(response.status, 'Сервер вернул некорректный ответ.');
+    }
+    if (!response.ok) {
+      throw new ApiError(response.status, data?.error || `Ошибка HTTP ${response.status}`);
+    }
+    return data;
+  } finally {
+    finishRequest();
   }
-  if (!response.ok) {
-    throw new ApiError(response.status, data?.error || `Ошибка HTTP ${response.status}`);
-  }
-  return data;
 }

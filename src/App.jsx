@@ -9,9 +9,31 @@ import AddProductForm from './components/AddProductForm';
 import PasswordForm from './components/PasswordForm';
 import MyOrders from './components/MyOrders';
 import OrdersPanel from './components/OrdersPanel';
+import ServerWakeNotice from './components/ServerWakeNotice';
+
+async function fetchCatalog() {
+  const categoriesRequest = apiFetch('/categories').catch(() => null);
+  const productsRequest = (async () => {
+    const products = [];
+    for (let offset = 0; ; offset += 20) {
+      const page = await apiFetch(offset ? `/products?limit=20&offset=${offset}` : '/products');
+      if (!Array.isArray(page)) throw new Error('Сервер вернул некорректный каталог');
+      products.push(...page);
+      if (page.length < 20) return products;
+    }
+  })();
+  const [products, categories] = await Promise.all([productsRequest, categoriesRequest]);
+  const validCategories = Array.isArray(categories) && categories.every((category) =>
+    category && (category.name === null || typeof category.name === 'string') &&
+    Number.isInteger(category.count) && category.count > 0);
+  return { products, categories: validCategories ? categories : null };
+}
 
 function App() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [cartCount, setCartCount] = useState(0);
 
@@ -26,9 +48,12 @@ function App() {
     try {
       setLoading(true);
       setError('');
-      const data = await apiFetch('/products');
-      if (!Array.isArray(data)) throw new Error('Сервер вернул некорректный каталог');
-      setProducts(data);
+      const data = await fetchCatalog();
+      setProducts(data.products);
+      setCategories(data.categories ?? []);
+      setCategoryError(data.categories === null);
+      setSelectedCategory((selected) => data.categories?.some((category) => category.name === selected)
+        ? selected : undefined);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -38,8 +63,12 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    apiFetch('/products').then((data) => {
-      if (active) setProducts(data);
+    fetchCatalog().then((data) => {
+      if (active) {
+        setProducts(data.products);
+        setCategories(data.categories ?? []);
+        setCategoryError(data.categories === null);
+      }
     }).catch((err) => {
       if (active) setError(err.message);
     }).finally(() => {
@@ -101,12 +130,14 @@ function App() {
   }
 
   const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (selectedCategory === undefined || product.category === selectedCategory)
   );
 
   return (
     <>
       <Header cartCount={cartCount} user={user} onLogout={handleLogout} />
+      <ServerWakeNotice />
 
       <main className="page">
         <section id="catalog" className="catalog">
@@ -121,6 +152,20 @@ function App() {
             />
           </div>
 
+          {categories.length > 0 && (
+            <div className="category-filters" role="group" aria-label="Категории товаров">
+              <button type="button" aria-pressed={selectedCategory === undefined}
+                onClick={() => setSelectedCategory(undefined)}>Все категории</button>
+              {categories.map((category) => (
+                <button type="button" key={JSON.stringify(category.name)}
+                  aria-pressed={selectedCategory === category.name}
+                  onClick={() => setSelectedCategory(category.name)}>
+                  {category.name === null ? 'Без категории' : category.name || 'Пустая категория'} ({category.count})
+                </button>
+              ))}
+            </div>
+          )}
+          {categoryError && <p className="status-message">Категории недоступны. Каталог работает без фильтра.</p>}
           {loading && <p className="status-message">Загрузка товаров...</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
 

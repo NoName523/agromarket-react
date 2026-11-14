@@ -53,8 +53,9 @@ describe('App catalog loading', () => {
 
     render(<App />)
 
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2))
     expect(apiFetch).toHaveBeenCalledWith('/products')
+    expect(apiFetch).toHaveBeenCalledWith('/categories')
   })
 
   it('shows an error when the catalog API rejects', async () => {
