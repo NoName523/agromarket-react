@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "schemas:sync": "node scripts/sync-schemas.js",
+    "predev": "npm run schemas:sync",
     "dev": "vite",
+    "prebuild": "npm run schemas:sync",
     "build": "vite build",
     "lint": "eslint .",
+    "pretest": "npm run schemas:sync",
     "test": "vitest run --config vite.config.js",
     "test:watch": "vitest",
     "coverage": "vitest run --config vite.config.js --coverage",
@@ -16,7 +20,8 @@
   },
   "dependencies": {
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

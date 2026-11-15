@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiFetch } from '../api';
+import { loginSchema, registerSchema } from '../generated/schemas.js';
 
 function LoginForm({ onAuthenticated }) {
   const [mode, setMode] = useState('login');
@@ -8,16 +9,25 @@ function LoginForm({ onAuthenticated }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setBusy(true);
     setError('');
+    setFieldErrors({});
+    const schema = mode === 'register' ? registerSchema : loginSchema;
+    const parsed = schema.safeParse(mode === 'register' ? { name, email, password } : { email, password });
+    if (!parsed.success) {
+      setFieldErrors(Object.fromEntries(parsed.error.issues.map((issue) =>
+        [issue.path[0], issue.message])));
+      return;
+    }
+    setBusy(true);
     try {
       const result = await apiFetch(`/auth/${mode}`, {
         method: 'POST',
         token: null,
-        body: mode === 'register' ? { name, email, password } : { email, password },
+        body: parsed.data,
       });
       setPassword('');
       onAuthenticated(result);
@@ -31,6 +41,7 @@ function LoginForm({ onAuthenticated }) {
   function selectMode(nextMode) {
     setMode(nextMode);
     setError('');
+    setFieldErrors({});
     setPassword('');
   }
 
@@ -49,16 +60,22 @@ function LoginForm({ onAuthenticated }) {
         {mode === 'register' && <>
           <label htmlFor="auth-name">Имя</label>
           <input id="auth-name" value={name} onChange={(event) => setName(event.target.value)}
+            aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'auth-name-error' : undefined}
             autoComplete="name" required />
+          {fieldErrors.name && <p id="auth-name-error" className="form-error" role="alert">{fieldErrors.name}</p>}
         </>}
         <label htmlFor="auth-email">Email</label>
         <input id="auth-email" type="email" value={email}
+          aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'auth-email-error' : undefined}
           onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+        {fieldErrors.email && <p id="auth-email-error" className="form-error" role="alert">{fieldErrors.email}</p>}
         <label htmlFor="auth-password">Пароль</label>
         <input id="auth-password" type="password" value={password}
+          aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? 'auth-password-error' : undefined}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
           minLength={mode === 'register' ? 8 : undefined} required />
+        {fieldErrors.password && <p id="auth-password-error" className="form-error" role="alert">{fieldErrors.password}</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
       </form>
