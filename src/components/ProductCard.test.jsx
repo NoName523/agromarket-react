@@ -21,6 +21,22 @@ describe('ProductCard', () => {
     expect(screen.getByText(/1250/)).toBeInTheDocument()
   })
 
+  it('renders an XSS-like product name as text without creating executable markup', () => {
+    const maliciousName = '<img src=x onerror=alert(1)>'
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const { container } = render(
+      <ProductCard product={{ ...product, name: maliciousName }} onAdd={vi.fn()} />,
+    )
+
+    expect(screen.getByRole('heading', { name: maliciousName })).toBeInTheDocument()
+    expect(container.querySelectorAll('img')).toHaveLength(1)
+    expect(container.querySelector('img[src="x"]')).not.toBeInTheDocument()
+    expect(container.querySelector('[onerror]')).not.toBeInTheDocument()
+    expect(alertSpy).not.toHaveBeenCalled()
+
+    alertSpy.mockRestore()
+  })
+
   it('calls onAdd with the product when the cart button is clicked', async () => {
     const user = userEvent.setup()
     const onAdd = vi.fn()
