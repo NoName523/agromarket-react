@@ -10,5 +10,10 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
     include: ['src/**/*.test.{js,jsx}'],
     css: false,
+    coverage: {
+      thresholds: {
+        lines: 60,
+      },
+    },
   },
 })
