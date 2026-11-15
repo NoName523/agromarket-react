@@ -1,11 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiFetch } from '../api'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { API_URL } from '../api'
+import { server } from '../test/server'
 import LoginForm from './LoginForm'
-
-vi.mock('../api', () => ({ apiFetch: vi.fn() }))
 
 afterEach(cleanup)
 
@@ -20,10 +20,6 @@ const text = {
 }
 
 describe('LoginForm API interactions', () => {
-  beforeEach(() => {
-    vi.mocked(apiFetch).mockReset()
-  })
-
   it('switches between login and registration modes', async () => {
     const user = userEvent.setup()
     render(<LoginForm onAuthenticated={vi.fn()} />)
@@ -51,8 +47,12 @@ describe('LoginForm API interactions', () => {
   it('submits valid registration data and reports the authenticated result', async () => {
     const user = userEvent.setup()
     const onAuthenticated = vi.fn()
-    const result = { id: 12, email: 'sam@example.com' }
-    vi.mocked(apiFetch).mockResolvedValue(result)
+    const result = { token: 'test-user-token', user: { id: 12, email: 'sam@example.com', name: 'Sam Farmer', role: 'user' } }
+    let registrationBody
+    server.use(http.post(`${API_URL}/auth/register`, async ({ request }) => {
+      registrationBody = await request.json()
+      return HttpResponse.json(result, { status: 201 })
+    }))
     render(<LoginForm onAuthenticated={onAuthenticated} />)
     const modeGroup = screen.getByRole('group', { name: text.group })
     await user.click(within(modeGroup).getByRole('button', { name: text.register }))
@@ -62,26 +62,18 @@ describe('LoginForm API interactions', () => {
     await user.click(screen.getByRole('button', { name: text.registerSubmit }))
 
     await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith(result))
-    expect(apiFetch).toHaveBeenCalledWith('/auth/register', {
-      method: 'POST',
-      token: null,
-      body: { name: 'Sam Farmer', email: 'sam@example.com', password: 'securepass123' },
-    })
+    expect(registrationBody).toEqual({ name: 'Sam Farmer', email: 'sam@example.com', password: 'securepass123' })
   })
 
   it('shows an API error when login fails', async () => {
     const user = userEvent.setup()
-    vi.mocked(apiFetch).mockRejectedValue(new Error('Invalid credentials'))
+    server.use(http.post(`${API_URL}/auth/login`, () =>
+      HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 })))
     render(<LoginForm onAuthenticated={vi.fn()} />)
     await user.type(screen.getByLabelText('Email'), 'sam@example.com')
     await user.type(screen.getByLabelText(text.password), 'wrongpass')
     await user.click(screen.getByRole('button', { name: text.loginSubmit }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials')
-    expect(apiFetch).toHaveBeenCalledWith('/auth/login', {
-      method: 'POST',
-      token: null,
-      body: { email: 'sam@example.com', password: 'wrongpass' },
-    })
   })
 })

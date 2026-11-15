@@ -46,9 +46,20 @@ test.describe('isolated buyer page checks', () => {
     })).toBeVisible()
     await expect(page.getByRole('heading', { name: products[0].name })).toBeVisible()
   })
+
+  test('shows navigation and catalog on Pixel 7', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'Pixel 7', 'This check targets the Pixel 7 project')
+
+    await page.goto('/')
+
+    await expect(page.getByRole('navigation')).toBeVisible()
+    await expect(page.locator('#catalog')).toBeVisible()
+    await expect(page.getByRole('heading', { name: products[0].name })).toBeVisible()
+  })
 })
 
-test('registers a buyer and places an order for an existing product @creates-order', async ({ page }) => {
+test('registers a buyer and places an order for an existing product @creates-order', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'Pixel 7', 'Run the data-creating flow only once in the desktop project')
   test.skip(!process.env.E2E_BASE_URL, 'Set E2E_BASE_URL to an explicitly selected test environment')
 
   const timestamp = Date.now()
