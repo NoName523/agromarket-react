@@ -211,10 +211,10 @@ function Storefront() {
           </section>
           <PasswordForm onAuthError={handleAuthError} />
           <MyOrders refreshKey={ordersRefreshKey} onAuthError={handleAuthError} />
-          {user.role === 'admin' && <>
-            <AddProductForm onAdded={loadProducts} onAuthError={handleAuthError} />
-            <OrdersPanel refreshKey={ordersRefreshKey} onAuthError={handleAuthError} />
-          </>}
+          {['admin', 'farmer'].includes(user.role) &&
+            <AddProductForm onAdded={loadProducts} onAuthError={handleAuthError} />}
+          {user.role === 'admin' &&
+            <OrdersPanel refreshKey={ordersRefreshKey} onAuthError={handleAuthError} />}
         </> : <LoginForm onAuthenticated={handleAuthenticated} />}
       </div>
 

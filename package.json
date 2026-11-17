@@ -12,10 +12,15 @@
     "lint": "eslint .",
     "pretest": "npm run schemas:sync",
     "test": "vitest run --config vite.config.js",
+    "pretest:run": "npm run schemas:sync",
+    "test:run": "vitest run --config vite.config.js",
     "test:watch": "vitest",
+    "precoverage": "npm run schemas:sync",
     "coverage": "vitest run --config vite.config.js --coverage",
     "test:coverage": "vitest run --config vite.config.js --coverage",
     "e2e": "node e2e/run.js local",
+    "e2e:visual": "node e2e/run.js visual",
+    "e2e:visual:update": "node e2e/run.js visual-update",
     "e2e:smoke": "node e2e/run.js smoke",
     "preview": "vite preview"
   },
@@ -25,6 +30,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.65.0",
     "@testing-library/jest-dom": "^6.9.1",

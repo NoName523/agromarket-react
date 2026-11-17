@@ -15,8 +15,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
       - run: npm run lint
+      - run: npm run test:run
       - run: npm run build
         env:
           VITE_API_URL: https://example.invalid/api

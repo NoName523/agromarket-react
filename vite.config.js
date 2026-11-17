@@ -11,6 +11,10 @@ export default defineConfig({
     include: ['src/**/*.test.{js,jsx}'],
     css: false,
     coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{js,jsx}'],
+      exclude: ['src/**/*.test.{js,jsx}', 'src/test/**', 'src/generated/**'],
+      reporter: ['text', 'html', 'json-summary'],
       thresholds: {
         lines: 60,
       },

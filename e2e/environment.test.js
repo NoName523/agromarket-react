@@ -69,6 +69,27 @@ test('production launch has only smoke phase and no sensitive environment', () =
   assert.throws(() => validateRunSettings({ E2E_MODE: 'local' }));
 });
 
+test('deployment smoke uses BASE_URL without falling back when it is empty', () => {
+  const plans = launchPlans(['smoke'], {
+    BASE_URL: 'https://preview.example.invalid', PRODUCTION_URL: 'https://example.invalid',
+  }, 'unit-run');
+  assert.equal(plans[0].env.PRODUCTION_URL, 'https://preview.example.invalid');
+  assert.equal(plans[0].phase, 'smoke');
+  assert.equal(launchPlans(['smoke'], { BASE_URL: '', PRODUCTION_URL: 'https://example.invalid' }, 'unit-run')[0].env.PRODUCTION_URL, '');
+  assert.throws(() => productionURL(plans[0].env.PRODUCTION_URL + '/path'));
+});
+
+test('visual commands run only the local visual project and update only when requested', () => {
+  const visual = launchPlans(['visual'], {}, 'unit-run');
+  assert.equal(visual.length, 1);
+  assert.equal(visual[0].env.E2E_MODE, 'local');
+  assert.equal(visual[0].env.E2E_PHASE, 'diagnostic');
+  assert.ok(visual[0].args.includes('--project=visual-chromium'));
+  assert.ok(!visual[0].args.includes('--update-snapshots'));
+  assert.ok(launchPlans(['visual-update'], {}, 'unit-run')[0].args.includes('--update-snapshots'));
+  assert.throws(() => launchPlans(['visual', '--update-snapshots'], {}, 'unit-run'));
+});
+
 test('diagnostic local policy cannot access authentication or write data', () => {
   const policy = { mode: 'local', sensitive: false, ...validateLocalEnvironment(env) };
   assert.equal(requestAllowed('http://127.0.0.1:3000/api/products/1', 'GET', policy), true);
@@ -95,6 +116,43 @@ test('sensitive artifacts fail closed after an unreviewed Playwright upgrade', (
   assert.doesNotThrow(() => validateSensitivePlaywrightVersion('1.65.0'));
   assert.throws(() => validateSensitivePlaywrightVersion('1.65.1'));
   assert.throws(() => validateSensitivePlaywrightVersion(undefined));
+});
+
+test('sensitive progress emits only fixed identifiers, status and duration', () => {
+  const previousSend = process.send;
+  const previousConnected = process.connected;
+  const messages = [];
+  try {
+    process.send = (message, callback) => { messages.push(message); callback?.(); };
+    process.connected = true;
+    const reporter = new SensitiveReporter();
+    reporter.onTestBegin({ title: 'canary-secret' });
+    reporter.onTestEnd({ title: 'canary-secret' }, { status: 'passed', duration: 12, stdout: 'canary-secret' });
+    const farmer = { title: 'farmer creates a product but has no administrative access @sensitive' };
+    reporter.onStepBegin(farmer, {}, { category: 'test.step', title: 'farmer-login' });
+    reporter.onStepEnd(farmer, {}, { category: 'test.step', title: 'farmer-login', duration: 34 });
+    reporter.onStepBegin(farmer, {}, { category: 'test.step', title: 'farmer-name-fill' });
+    reporter.onStepEnd(farmer, {}, { category: 'test.step', title: 'farmer-name-fill', duration: 18 });
+    reporter.onStepBegin(farmer, {}, { category: 'test.step', title: 'farmer-price-fill' });
+    reporter.onStepEnd(farmer, {}, { category: 'test.step', title: 'farmer-price-fill', duration: 20 });
+    reporter.onStepBegin(farmer, {}, { category: 'test.step', title: 'canary-secret' });
+    reporter.onEnd();
+    assert.deepEqual(messages, [
+      { event: 'start', test: 'other' },
+      { event: 'end', test: 'other', status: 'passed', duration: 12 },
+      { event: 'step-start', step: 'farmer-login' },
+      { event: 'step-end', step: 'farmer-login', duration: 34, status: 'passed' },
+      { event: 'step-start', step: 'farmer-name-fill' },
+      { event: 'step-end', step: 'farmer-name-fill', duration: 18, status: 'passed' },
+      { event: 'step-start', step: 'farmer-price-fill' },
+      { event: 'step-end', step: 'farmer-price-fill', duration: 20, status: 'passed' },
+      { event: 'complete' },
+    ]);
+    assert.equal(JSON.stringify(messages).includes('canary-secret'), false);
+  } finally {
+    process.send = previousSend;
+    process.connected = previousConnected;
+  }
 });
 
 test('production base URL cannot carry credentials or URL tokens into reports', () => {

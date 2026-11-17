@@ -95,6 +95,26 @@ describe('App catalog loading', () => {
 })
 
 describe('App authenticated layout', () => {
+  it.each([
+    ['farmer', true, false],
+    ['admin', true, true],
+    ['user', false, false],
+  ])('shows product and administrative controls for %s according to role', async (role, canAdd, isAdmin) => {
+    localStorage.setItem(TOKEN_KEY, 'fixture-token')
+    server.use(
+      http.get(`${API_URL}/auth/me`, () => HttpResponse.json({ id: 4, name: 'Test account', role })),
+      http.get(`${API_URL}/products`, () => HttpResponse.json([{ id: 15, name: 'Local potatoes', price: 800 }])),
+      http.get(`${API_URL}/orders/my`, () => HttpResponse.json([])),
+      http.get(`${API_URL}/orders`, () => HttpResponse.json([])),
+    )
+    render(<App />)
+    await screen.findByText(/Вы вошли как Test account/)
+    await screen.findByRole('heading', { name: 'Local potatoes' })
+    expect(Boolean(screen.queryByRole('heading', { name: 'Добавить товар' }))).toBe(canAdd)
+    expect(Boolean(screen.queryByRole('heading', { name: 'Панель заявок' }))).toBe(isAdmin)
+    expect(Boolean(screen.queryByRole('button', { name: 'Удалить товар' }))).toBe(isAdmin)
+  })
+
   it('stores the login session, loads account panels, and logs out', async () => {
     const user = userEvent.setup()
     let loginBody
