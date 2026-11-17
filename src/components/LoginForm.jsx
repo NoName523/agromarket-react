@@ -33,6 +33,11 @@ function LoginForm({ onAuthenticated }) {
       onAuthenticated(result);
     } catch (err) {
       setError(err.message);
+      if (err.status === 400 && Array.isArray(err.details)) {
+        setFieldErrors(Object.fromEntries(err.details
+          .filter((detail) => detail && ['name', 'email', 'password'].includes(detail.field) && typeof detail.message === 'string')
+          .map(({ field, message }) => [field, message])));
+      }
     } finally {
       setBusy(false);
     }

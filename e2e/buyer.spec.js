@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
+import { expect, test } from './fixtures.js'
 
 const products = [
   {
@@ -58,14 +59,25 @@ test.describe('isolated buyer page checks', () => {
   })
 })
 
-test('registers a buyer and places an order for an existing product @creates-order', async ({ page }, testInfo) => {
+test('opens a product from the real local catalog', async ({ page }) => {
+  await page.goto('/')
+  await expect(page).toHaveTitle(/АгроМаркет/)
+  await expect(page.getByRole('heading', { name: 'Каталог', exact: true })).toBeVisible()
+  const link = page.locator('#catalog article h3 a').first()
+  await expect(link).toBeVisible()
+  const name = await link.innerText()
+  await link.click()
+  await expect(page).toHaveURL(/\/products\/\d+\/?$/)
+  await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible()
+})
+
+test('registers a buyer and places an order for an existing product @creates-order @sensitive', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'Pixel 7', 'Run the data-creating flow only once in the desktop project')
-  test.skip(!process.env.E2E_BASE_URL, 'Set E2E_BASE_URL to an explicitly selected test environment')
 
   const timestamp = Date.now()
   const buyerName = 'E2E Test Buyer'
   const email = `e2e.buyer.${timestamp}@example.com`
-  const password = 'TestBuyerPass!2026'
+  const password = randomUUID()
 
   await page.goto('/')
 
@@ -91,7 +103,7 @@ test('registers a buyer and places an order for an existing product @creates-ord
   }).click()
   await expect(page.getByText(new RegExp('\\u041a\\u043e\\u0440\\u0437\\u0438\\u043d\\u0430:\\s*1'))).toBeVisible()
 
-  const orderForm = page.locator('#contact')
+  const orderForm = page.locator('section#contact')
   await orderForm.getByLabel(new RegExp('\\u0412\\u044b\\u0431\\u0435\\u0440\\u0438\\u0442\\u0435 \\u0442\\u043e\\u0432\\u0430\\u0440')).selectOption({ label: productName })
   await orderForm.getByLabel(new RegExp('\\u0418\\u043c\\u044f / \\u043e\\u0440\\u0433\\u0430\\u043d\\u0438\\u0437\\u0430\\u0446\\u0438\\u044f')).fill(buyerName)
   await orderForm.getByLabel('Email').fill(email)

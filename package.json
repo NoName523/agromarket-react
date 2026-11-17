@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --config vite.config.js --coverage",
     "test:coverage": "vitest run --config vite.config.js --coverage",
-    "e2e": "playwright test",
+    "e2e": "node e2e/run.js local",
+    "e2e:smoke": "node e2e/run.js smoke",
     "preview": "vite preview"
   },
   "dependencies": {

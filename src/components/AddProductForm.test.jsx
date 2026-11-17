@@ -10,6 +10,21 @@ import AddProductForm from './AddProductForm'
 afterEach(cleanup)
 
 describe('AddProductForm', () => {
+  it('shows a negative price error on a normal submit without creating a product', async () => {
+    const user = userEvent.setup()
+    let requests = 0
+    server.use(http.post(`${API_URL}/products`, () => {
+      requests += 1
+      return HttpResponse.json({ id: 1 })
+    }))
+    render(<AddProductForm onAdded={vi.fn()} onAuthError={vi.fn()} />)
+    await user.type(screen.getByLabelText('Название'), 'Товар')
+    await user.type(screen.getByLabelText('Цена, тг'), '-500')
+    await user.click(screen.getByRole('button', { name: 'Добавить товар' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Цена должна быть больше 0')
+    expect(requests).toBe(0)
+  })
+
   it('posts valid product details, refreshes the catalog, and shows success', async () => {
     const user = userEvent.setup()
     const onAdded = vi.fn().mockResolvedValue(undefined)

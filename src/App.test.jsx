@@ -62,6 +62,13 @@ describe('App catalog loading', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Catalog unavailable')
   })
 
+  it('shows the catalog error for HTTP 500', async () => {
+    server.use(http.get(`${API_URL}/products`, () =>
+      HttpResponse.json({ error: 'Catalog server error' }, { status: 500 })))
+    render(<App />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Catalog server error')
+  })
+
   it('shows an error when the server returns a malformed catalog', async () => {
     server.use(http.get(`${API_URL}/products`, () => HttpResponse.json({ products: [] })))
 

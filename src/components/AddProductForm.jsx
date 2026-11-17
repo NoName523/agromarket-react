@@ -22,8 +22,10 @@ function AddProductForm({ onAdded, onAuthError }) {
       image: fields.image || null,
     });
     if (!parsed.success) {
-      setFieldErrors(Object.fromEntries(parsed.error.issues.map((issue) =>
-        [issue.path[0], issue.message])));
+      const errors = Object.fromEntries(parsed.error.issues.map((issue) =>
+        [issue.path[0], issue.message]));
+      if (fields.price !== '' && Number(fields.price) <= 0) errors.price = 'Цена должна быть больше 0';
+      setFieldErrors(errors);
       return;
     }
     setBusy(true);
@@ -53,6 +55,12 @@ function AddProductForm({ onAdded, onAuthError }) {
         {fieldErrors.name && <p id="product-name-error" className="form-error" role="alert">{fieldErrors.name}</p>}
         <label htmlFor="product-price">Цена, тг</label>
         <input id="product-price" name="price" type="number" min="1" step="1" required
+          onInvalid={(event) => {
+            if (event.currentTarget.value !== '' && Number(event.currentTarget.value) <= 0) {
+              setFieldErrors((errors) => ({ ...errors, price: 'Цена должна быть больше 0' }));
+            }
+          }}
+          onChange={() => setFieldErrors((errors) => ({ ...errors, price: undefined }))}
           aria-invalid={Boolean(fieldErrors.price)} aria-describedby={fieldErrors.price ? 'product-price-error' : undefined} />
         {fieldErrors.price && <p id="product-price-error" className="form-error" role="alert">{fieldErrors.price}</p>}
         <label htmlFor="product-category">Категория</label>

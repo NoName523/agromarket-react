@@ -10,6 +10,7 @@ import PasswordForm from './components/PasswordForm';
 import MyOrders from './components/MyOrders';
 import OrdersPanel from './components/OrdersPanel';
 import ServerWakeNotice from './components/ServerWakeNotice';
+import ProductPage from './components/ProductPage';
 
 async function fetchCatalog() {
   const categoriesRequest = apiFetch('/categories').catch(() => null);
@@ -29,7 +30,7 @@ async function fetchCatalog() {
   return { products, categories: validCategories ? categories : null };
 }
 
-function App() {
+function Storefront() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryError, setCategoryError] = useState(false);
@@ -222,4 +223,7 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  const productRoute = window.location.pathname.match(/^\/products\/(\d+)\/?$/);
+  return productRoute ? <ProductPage id={productRoute[1]} /> : <Storefront />;
+}

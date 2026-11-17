@@ -76,4 +76,63 @@ describe('LoginForm API interactions', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials')
   })
+
+  it('shows a rate limit error for HTTP 429', async () => {
+    const user = userEvent.setup()
+    const onAuthenticated = vi.fn()
+    server.use(http.post(`${API_URL}/auth/login`, () =>
+      HttpResponse.json({ error: 'Too many attempts' }, { status: 429 })))
+    render(<LoginForm onAuthenticated={onAuthenticated} />)
+    await user.type(screen.getByLabelText('Email'), 'sam@example.com')
+    await user.type(screen.getByLabelText(text.password), 'validpass123')
+    await user.click(screen.getByRole('button', { name: text.loginSubmit }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts')
+    expect(onAuthenticated).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: text.loginSubmit })).toBeEnabled()
+  })
+
+  it('disables login while the request is pending and enables it after failure', async () => {
+    const user = userEvent.setup()
+    let release
+    let requestStarted
+    const pending = new Promise((resolve) => { release = resolve })
+    const started = new Promise((resolve) => { requestStarted = resolve })
+    server.use(http.post(`${API_URL}/auth/login`, async () => {
+      requestStarted()
+      await pending
+      return HttpResponse.json({ error: 'Try again' }, { status: 401 })
+    }))
+    render(<LoginForm onAuthenticated={vi.fn()} />)
+    await user.type(screen.getByLabelText('Email'), 'sam@example.com')
+    await user.type(screen.getByLabelText(text.password), 'validpass123')
+    await user.click(screen.getByRole('button', { name: text.loginSubmit }))
+    await started
+    expect(screen.getByRole('button', { name: 'Подождите…' })).toBeDisabled()
+    release()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Try again')
+    expect(screen.getByRole('button', { name: text.loginSubmit })).toBeEnabled()
+  })
+
+  it('shows registration validation details returned by the server', async () => {
+    const user = userEvent.setup()
+    const onAuthenticated = vi.fn()
+    server.use(http.post(`${API_URL}/auth/register`, () => HttpResponse.json({
+      error: 'Email rejected by server',
+      details: [
+        { field: 'email', message: 'Email rejected by server' },
+        { field: 'name', message: 'Name rejected by server' },
+      ],
+    }, { status: 400 })))
+    render(<LoginForm onAuthenticated={onAuthenticated} />)
+    await user.click(within(screen.getByRole('group', { name: text.group })).getByRole('button', { name: text.register }))
+    await user.type(screen.getByLabelText(text.name), 'Sam Farmer')
+    await user.type(screen.getByLabelText('Email'), 'sam@example.com')
+    await user.type(screen.getByLabelText(text.password), 'validpass123')
+    await user.click(screen.getByRole('button', { name: text.registerSubmit }))
+    expect(await screen.findByText('Name rejected by server')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Email rejected by server')
+    expect(screen.getByLabelText(text.name)).toHaveAccessibleDescription('Name rejected by server')
+    expect(onAuthenticated).not.toHaveBeenCalled()
+  })
 })

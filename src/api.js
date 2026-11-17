@@ -4,10 +4,11 @@ export const TOKEN_KEY = 'agromarket_jwt';
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, details) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.details = Array.isArray(details) ? details : [];
   }
 }
 
@@ -43,7 +44,7 @@ export async function apiFetch(path, { token, headers, body, ...options } = {}) 
       throw new ApiError(response.status, 'Сервер вернул некорректный ответ.');
     }
     if (!response.ok) {
-      throw new ApiError(response.status, data?.error || `Ошибка HTTP ${response.status}`);
+      throw new ApiError(response.status, data?.error || `Ошибка HTTP ${response.status}`, data?.details);
     }
     return data;
   } finally {

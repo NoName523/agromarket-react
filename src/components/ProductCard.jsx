@@ -4,7 +4,7 @@ function ProductCard({ product, onAdd, onDelete, featured }) {
             {featured === true && <span className="badge">Товар недели</span>}
             <img src={product.image} alt={product.name} />
             <div className="card-body">
-                <h3>{product.name}</h3>
+                <h3><a href={`/products/${product.id}`}>{product.name}</a></h3>
                 <p className="card-price">{product.price} тг</p>
                 <button className="card-button" onClick={() => onAdd(product)}>
                     В корзину

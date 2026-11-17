@@ -99,6 +99,15 @@ describe('shared schema validation in forms', () => {
     expect(screen.getByRole('alert')).not.toBeEmptyDOMElement();
   });
 
+  it('rejects a negative price with a clear error and no request', () => {
+    const { container } = renderProduct();
+    change('Цена, тг', '-500');
+    fireEvent.submit(container.querySelector('form'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Цена должна быть больше 0');
+    expect(screen.getByLabelText('Цена, тг')).toHaveAttribute('aria-invalid', 'true');
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
   it('submits a numeric price, trims product name and strips unknown fields', async () => {
     const { container, onAdded, onAuthError } = renderProduct();
     change('Название', ' Honey ');

@@ -14,6 +14,10 @@ const product = {
 afterEach(cleanup)
 
 describe('ProductCard', () => {
+  it('links the product name to its detail page', () => {
+    render(<ProductCard product={product} onAdd={vi.fn()} />)
+    expect(screen.getByRole('link', { name: product.name })).toHaveAttribute('href', `/products/${product.id}`)
+  })
   it('shows the product name and price', () => {
     render(<ProductCard product={product} onAdd={vi.fn()} />)
 
